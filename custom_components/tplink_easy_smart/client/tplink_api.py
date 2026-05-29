@@ -158,6 +158,13 @@ class TpLinkApi:
         fc_config_flags = all_info.get("fc_cfg")
         fc_actual_flags = all_info.get("fc_act")
 
+        if not all(
+            x is not None
+            for x in (enabled_flags, speeds_config, speeds_actual, fc_config_flags, fc_actual_flags)
+        ):
+            _LOGGER.warning("get_port_states: missing expected keys in all_info")
+            return result
+
         for number in range(1, max_port_num + 1):
             state = PortState(
                 number=number,
@@ -170,6 +177,7 @@ class TpLinkApi:
             result.append(state)
 
         return result
+
     async def get_port_statistics(self) -> list[PortStatistics]:
         """Return the port statistics."""
         if not await self.is_feature_available(FEATURE_STATS):
@@ -194,6 +202,9 @@ class TpLinkApi:
 
         pkts = all_info.get("pkts")
         enabled_flags = all_info.get("state")
+        if pkts is None or enabled_flags is None:
+            _LOGGER.warning("get_port_statistics: missing expected keys in all_info")
+            return result
         k = 0
         for number in range(1, max_port_num + 1):
             if k + 4 > len(pkts):
@@ -336,9 +347,9 @@ class TpLinkApi:
         priority: PoePriority,
         power_limit: PoePowerLimit | float,
     ) -> None:
+        """Change port poe settings."""
         if not await self.is_feature_available(FEATURE_POE):
             raise ActionError("POE feature is not supported by device")
-        """Change port poe settings."""
         if port_number < 1:
             raise ActionError("Port number should be greater than or equals to 1")
 

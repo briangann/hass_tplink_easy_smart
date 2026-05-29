@@ -137,7 +137,7 @@ class TpLinkSensor(CoordinatorEntity[TpLinkDataUpdateCoordinator], SensorEntity)
 #   TpLinkNetworkInfoSensor
 # ---------------------------
 class TpLinkNetworkInfoSensor(TpLinkSensor):
-    entity_description: TpLinkDataUpdateCoordinator
+    entity_description: TpLinkSensorEntityDescription
     _attr_native_value: str | None = None
 
     def __init__(
@@ -168,7 +168,7 @@ class TpLinkNetworkInfoSensor(TpLinkSensor):
 #   TpLinkPoeInfoSensor
 # ---------------------------
 class TpLinkPoeInfoSensor(TpLinkSensor):
-    entity_description: TpLinkDataUpdateCoordinator
+    entity_description: TpLinkSensorEntityDescription
     _attr_native_value: float | None = None
 
     def __init__(

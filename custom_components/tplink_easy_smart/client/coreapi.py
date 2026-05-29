@@ -91,7 +91,7 @@ class ApiCallError(Exception):
         return self._error_code
 
     @property
-    def category(self) -> int | None:
+    def category(self) -> str | None:
         """Error category."""
         return self._error_category
 
@@ -138,6 +138,8 @@ def _get_variables(page: str) -> dict[str, str]:
 # ---------------------------
 def _to_list(array_data: str) -> Iterable[str]:
     match = re.match(_ARRAY_VALUES_REGEX, array_data)
+    if not match:
+        return
     array_items = match.group("items")
     if array_items:
         for item in array_items.split(","):
