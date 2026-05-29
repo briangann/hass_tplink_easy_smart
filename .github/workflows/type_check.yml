@@ -24,7 +24,10 @@ jobs:
         run: git clone --depth 1 --branch 2026.5.4 https://github.com/home-assistant/core.git /tmp/ha-core
 
       - name: "Install dependencies"
-        run: pip install --no-deps /tmp/ha-core && pip install aiohttp voluptuous json5==0.14.0 pyright==1.1.409
+        run: pip install --no-deps /tmp/ha-core && pip install aiohttp voluptuous json5==0.14.0 pyright==1.1.409 pytest
 
       - name: "Run pyright"
         run: pyright custom_components/tplink_easy_smart/
+
+      - name: "Run tests"
+        run: pytest
