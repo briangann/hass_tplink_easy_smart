@@ -204,6 +204,9 @@ class TpLinkPortStateBinarySensor(TpLinkBinarySensor):
                 self._attr_extra_state_attributes["rx_good_packets"] = port_statistics.rx_good_pkts
                 self._attr_extra_state_attributes["tx_bad_packets"] = port_statistics.tx_bad_pkts
                 self._attr_extra_state_attributes["rx_bad_packets"] = port_statistics.rx_bad_pkts
+            else:
+                for key in ("tx_good_packets", "rx_good_packets", "tx_bad_packets", "rx_bad_packets"):
+                    self._attr_extra_state_attributes.pop(key, None)
         else:
             self._attr_available = False
             self._attr_is_on = None
