@@ -68,8 +68,10 @@ class TpLinkFeaturesDetector:
                 ("poe_port_num", VariableType.Int),
             ],
         )
+        if data is None:
+            return False
         poe_port_num = data.get("poe_port_num")
-        return data.get("portConfig") is not None and poe_port_num is not None and poe_port_num > 0
+        return data.get("portConfig") is not None and isinstance(poe_port_num, int) and poe_port_num > 0
 
     @log_feature(FEATURE_STATS)
     @disconnected_as_false
@@ -81,8 +83,10 @@ class TpLinkFeaturesDetector:
                 ("max_port_num", VariableType.Int),
             ],
         )
+        if data is None:
+            return False
         max_port_num = data.get("max_port_num")
-        return data.get("all_info") is not None and max_port_num is not None and max_port_num > 0
+        return data.get("all_info") is not None and isinstance(max_port_num, int) and max_port_num > 0
 
     async def update(self) -> None:
         """Update the available features list."""

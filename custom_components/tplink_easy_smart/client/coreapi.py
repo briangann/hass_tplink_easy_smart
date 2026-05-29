@@ -4,7 +4,7 @@ import asyncio
 import logging
 import re
 from enum import Enum
-from typing import Callable, Dict, Final, Iterable, Tuple, TypeAlias
+from typing import Any, Callable, Dict, Final, Iterable, Tuple, TypeAlias, cast
 
 import aiohttp
 import json5
@@ -33,7 +33,7 @@ _ARRAY_VALUES_REGEX = r"\s*new\s*Array\s*\((?P<items>[^\)]+)\)"
 
 _LOGGER = logging.getLogger(__name__)
 
-VariableValue: TypeAlias = str | int | list[str] | dict[str, any]
+VariableValue: TypeAlias = str | int | list[str] | dict[str, Any]
 
 _VAR_LOGON_INFO: str = "logonInfo"
 
@@ -116,8 +116,10 @@ async def _get_response_text(response: ClientResponse) -> str:
 # ---------------------------
 #   _get_variables
 # ---------------------------
-def _get_variables(page: str) -> dict[str, str]:
+def _get_variables(page: str | None) -> dict[str, str]:
     result = {}
+    if not page:
+        return result
 
     script_match = re.match(_SCRIPT_REGEX, page, re.RegexFlag.DOTALL)
     if not script_match:
@@ -149,14 +151,14 @@ def _to_list(array_data: str) -> Iterable[str]:
 # ---------------------------
 #   _to_dict
 # ---------------------------
-def _to_dict(json_data: str) -> dict[str, any] | None:
-    return json5.loads(json_data) if json_data else None
+def _to_dict(json_data: str) -> dict[str, Any] | None:
+    return cast(dict[str, Any], json5.loads(json_data)) if json_data else None
 
 
 # ---------------------------
 #   _convert_value
 # ---------------------------
-def _convert_value(value: str, variable_type: VariableType) -> VariableValue | None:
+def _convert_value(value: str | None, variable_type: VariableType) -> VariableValue | None:
     if value is None:
         return None
     elif variable_type == VariableType.Str:
@@ -243,13 +245,15 @@ class TpLinkWebApi:
 
     async def _get_raw(self, path: str) -> ClientResponse:
         """Perform GET request to the specified relative URL and return raw ClientResponse."""
+        session = self._session
+        assert session is not None
         try:
             _LOGGER.debug("Performing GET to %s", path)
-            response = await self._session.get(
+            response = await session.get(
                 url=self._get_url(path),
                 allow_redirects=True,
-                verify_ssl=self._verify_ssl,
-                timeout=TIMEOUT,
+                ssl=self._verify_ssl,
+                timeout=aiohttp.ClientTimeout(total=TIMEOUT),
             )
             _LOGGER.debug("GET %s performed, status: %s", path, response.status)
             return response
@@ -267,15 +271,17 @@ class TpLinkWebApi:
                 APICALL_ERRCAT_REQUEST,
             )
 
-    async def _post_raw(self, path: str, data: Dict) -> ClientResponse:
+    async def _post_raw(self, path: str, data: Dict | None) -> ClientResponse:
         """Perform POST request to the specified relative URL with specified body and return raw ClientResponse."""
+        session = self._session
+        assert session is not None
         try:
             _LOGGER.debug("Performing POST to %s", path)
-            response = await self._session.post(
+            response = await session.post(
                 url=self._get_url(path),
                 data=data,
-                verify_ssl=self._verify_ssl,
-                timeout=TIMEOUT,
+                ssl=self._verify_ssl,
+                timeout=aiohttp.ClientTimeout(total=TIMEOUT),
             )
             _LOGGER.debug("POST to %s performed, status: %s", path, response.status)
             return response
@@ -328,9 +334,12 @@ class TpLinkWebApi:
                     "Failed to get Logon response body", AUTH_FAILURE_GENERAL
                 )
 
-            array_items: list[str] = _get_variable(
-                result, _VAR_LOGON_INFO, VariableType.List
-            )
+            logon_info = _get_variable(result, _VAR_LOGON_INFO, VariableType.List)
+            if not isinstance(logon_info, list) or not logon_info:
+                raise AuthenticationError(
+                    "Failed to parse logon response", AUTH_FAILURE_GENERAL
+                )
+            array_items: list[str] = logon_info
 
             if array_items[0] == "0":
                 _LOGGER.debug("Authentication success")
@@ -378,7 +387,7 @@ class TpLinkWebApi:
             )
 
     async def get(
-        self, path: str, query: str | None = None, **kwargs: any
+        self, path: str, query: str | None = None, **kwargs: Any
     ) -> str | None:
         """Perform GET request to the relative address."""
         async with self._call_locker:
@@ -411,7 +420,7 @@ class TpLinkWebApi:
             return response_text
 
     async def post(
-        self, path: str, data: dict | None = None, **kwargs: any
+        self, path: str, data: dict | None = None, **kwargs: Any
     ) -> str | None:
         """Perform POST request to the relative address."""
         async with self._call_locker:
@@ -442,7 +451,7 @@ class TpLinkWebApi:
             return response_text
 
     async def get_variables(
-        self, path: str, variables: Iterable[Tuple[str, VariableType]], **kwargs: any
+        self, path: str, variables: Iterable[Tuple[str, VariableType]], **kwargs: Any
     ) -> dict[str, VariableValue | None] | None:
         """Perform GET request to the relative address and get dict with the specified variables."""
         response_text = await self.get(path)
@@ -459,7 +468,7 @@ class TpLinkWebApi:
         return result
 
     async def get_variable(
-        self, path: str, variable: str, variable_type: VariableType, **kwargs: any
+        self, path: str, variable: str, variable_type: VariableType, **kwargs: Any
     ) -> VariableValue | None:
         """Perform GET request to the relative address and get the value of the specified variable."""
         result = await self.get_variables(path, [(variable, variable_type)], **kwargs)

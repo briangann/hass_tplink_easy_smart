@@ -106,7 +106,8 @@ def _find_coordinator(
         coordinator = item.get(DATA_KEY_COORDINATOR)
         if not coordinator or not isinstance(coordinator, TpLinkDataUpdateCoordinator):
             continue
-        if coordinator.get_switch_info().mac == device_mac:
+        switch_info = coordinator.get_switch_info()
+        if switch_info and switch_info.mac == device_mac:
             return coordinator
     return None
 
@@ -190,7 +191,7 @@ async def async_setup_services(hass: HomeAssistant, config_entry: ConfigEntry) -
         )
         return
 
-    @verify_domain_control(DOMAIN)
+    @verify_domain_control(hass, DOMAIN)
     async def async_call_service(service: ServiceCall) -> None:
         service_name = service.service
 

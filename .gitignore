@@ -154,3 +154,4 @@ cython_debug/
 #.idea/
 
 desktop.ini
+pyrightconfig.json

@@ -115,7 +115,7 @@ class TpLinkApi:
         )
 
         def get_value(key: str) -> str | None:
-            if data is None:
+            if not isinstance(data, dict):
                 return None
             array = data.get(key, [])
             if len(array) != 1:
@@ -144,12 +144,15 @@ class TpLinkApi:
 
         result: list[PortState] = []
 
+        if data is None:
+            return result
+
         all_info = data.get("all_info")
-        if not all_info:
+        if not isinstance(all_info, dict):
             return result
 
         max_port_num = data.get("max_port_num")
-        if not max_port_num:
+        if not isinstance(max_port_num, int):
             return result
 
         enabled_flags = all_info.get("state")
@@ -158,9 +161,12 @@ class TpLinkApi:
         fc_config_flags = all_info.get("fc_cfg")
         fc_actual_flags = all_info.get("fc_act")
 
-        if not all(
-            x is not None
-            for x in (enabled_flags, speeds_config, speeds_actual, fc_config_flags, fc_actual_flags)
+        if (
+            enabled_flags is None
+            or speeds_config is None
+            or speeds_actual is None
+            or fc_config_flags is None
+            or fc_actual_flags is None
         ):
             _LOGGER.warning("get_port_states: missing expected keys in all_info")
             return result
@@ -192,12 +198,15 @@ class TpLinkApi:
 
         result: list[PortStatistics] = []
 
+        if data is None:
+            return result
+
         all_info = data.get("all_info")
-        if not all_info:
+        if not isinstance(all_info, dict):
             return result
 
         max_port_num = data.get("max_port_num")
-        if not max_port_num:
+        if not isinstance(max_port_num, int):
             return result
 
         pkts = all_info.get("pkts")
@@ -222,7 +231,6 @@ class TpLinkApi:
 
         return result
 
-
     async def get_port_poe_states(self) -> list[PortPoeState]:
         """Return the port states."""
         if not await self.is_feature_available(FEATURE_POE):
@@ -238,13 +246,16 @@ class TpLinkApi:
 
         result: list[PortPoeState] = []
 
+        if data is None:
+            return result
+
         port_config = data.get("portConfig")
-        if not port_config:
+        if not isinstance(port_config, dict):
             _LOGGER.debug("No portConfig found, returning")
             return result
 
         max_port_num = data.get("poe_port_num")
-        if not max_port_num:
+        if not isinstance(max_port_num, int):
             _LOGGER.debug("No poe_port_num found, returning")
             return result
 
@@ -256,6 +267,19 @@ class TpLinkApi:
         voltages = port_config.get("voltage")
         pdclass_flags = port_config.get("pdclass")
         powerstatus_flags = port_config.get("powerstatus")
+
+        if (
+            state_flags is None
+            or priority_flags is None
+            or powerlimit_flags is None
+            or powers is None
+            or currents is None
+            or voltages is None
+            or pdclass_flags is None
+            or powerstatus_flags is None
+        ):
+            _LOGGER.warning("get_port_poe_states: missing expected keys in portConfig")
+            return result
 
         for number in range(1, max_port_num + 1):
             state = PortPoeState(
@@ -284,7 +308,7 @@ class TpLinkApi:
         poe_config = await self._core_api.get_variable(
             URL_POE_SETTINGS_GET, "globalConfig", VariableType.Dict
         )
-        if not poe_config:
+        if not isinstance(poe_config, dict):
             _LOGGER.debug("No globalConfig found, returning")
             return None
 
@@ -356,7 +380,7 @@ class TpLinkApi:
         poe_ports_count = await self._core_api.get_variable(
             URL_POE_SETTINGS_GET, "poe_port_num", VariableType.Int
         )
-        if not poe_ports_count:
+        if not isinstance(poe_ports_count, int):
             raise ActionError("Can not get PoE ports count")
 
         if port_number > poe_ports_count:
@@ -371,9 +395,10 @@ class TpLinkApi:
             raise ActionError("Invalid PoePriority specified")
 
         if isinstance(power_limit, PoePowerLimit):
-            ppowerlimit, ppowerlimit2 = _POE_POWER_LIMITS_SET_MAP.get(power_limit)
-            if not ppowerlimit:
+            limit_entry = _POE_POWER_LIMITS_SET_MAP.get(power_limit)
+            if not limit_entry:
                 raise ActionError("Invalid PoePowerLimit specified")
+            ppowerlimit, ppowerlimit2 = limit_entry
         elif isinstance(power_limit, float):
             if 0.1 <= power_limit <= 30.0:  # hardcoded in Tp-Link javascript
                 ppowerlimit = 6

@@ -14,7 +14,7 @@ from homeassistant.const import (
     CONF_VERIFY_SSL,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .client.classes import PoePowerLimit, PoePriority, TpLinkSystemInfo
@@ -35,7 +35,7 @@ _LOGGER = logging.getLogger(__name__)
 # ---------------------------
 #   TpLinkDataUpdateCoordinator
 # ---------------------------
-class TpLinkDataUpdateCoordinator(DataUpdateCoordinator):
+class TpLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
     def __init__(self, hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         """Initialize."""
         self._config: ConfigEntry = config_entry
@@ -63,14 +63,14 @@ class TpLinkDataUpdateCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=config_entry.data[CONF_NAME],
-            update_method=self.async_update,
+            update_method=self.async_update,  # pyright: ignore[reportArgumentType]
             update_interval=timedelta(seconds=update_interval),
         )
 
     @property
     def unique_id(self) -> str:
         """Return the system descriptor."""
-        entry = self.config_entry
+        entry = self._config
 
         if entry.unique_id:
             return entry.unique_id
@@ -80,7 +80,7 @@ class TpLinkDataUpdateCoordinator(DataUpdateCoordinator):
     @property
     def cfg_host(self) -> str:
         """Return the host of the device."""
-        return self.config_entry.data[CONF_HOST]
+        return self._config.data[CONF_HOST]
 
     @property
     def ports_count(self) -> int:
@@ -199,7 +199,7 @@ class TpLinkDataUpdateCoordinator(DataUpdateCoordinator):
 
         result = DeviceInfo(
             configuration_url=self._api.device_url,
-            identifiers={(DOMAIN, switch_info.mac)},
+            identifiers={(DOMAIN, switch_info.mac or "")},
             manufacturer=ATTR_MANUFACTURER,
             name=switch_info.name,
             hw_version=switch_info.hardware,
