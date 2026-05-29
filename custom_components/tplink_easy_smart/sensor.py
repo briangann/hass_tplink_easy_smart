@@ -1,6 +1,6 @@
 """Support for additional sensors."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import logging
 from typing import Final
 
@@ -42,17 +42,13 @@ ENTITY_DOMAIN: Final = "sensor"
 # ---------------------------
 #   TpLinkSensorEntityDescription
 # ---------------------------
-@dataclass
+@dataclass(frozen=True)
 class TpLinkSensorEntityDescription(SensorEntityDescription):
     """A class that describes sensor entities."""
 
     function_name: str | None = None
     function_uid: str | None = None
     device_name: str | None = None
-    name: str | None = field(init=False)
-
-    def __post_init__(self):
-        self.name = generate_entity_name(self.function_name, self.device_name)
 
 
 # ---------------------------
@@ -65,14 +61,17 @@ async def async_setup_entry(
 ) -> None:
     """Set up sensors for TP-Link component."""
     coordinator: TpLinkDataUpdateCoordinator = get_coordinator(hass, config_entry)
+    switch_info = coordinator.get_switch_info()
+    device_name = switch_info.name if switch_info else None
 
-    sensors = [
+    sensors: list[TpLinkSensor] = [
         TpLinkNetworkInfoSensor(
             coordinator,
             TpLinkSensorEntityDescription(
                 key="network_info",
                 icon="mdi:network-pos",
-                device_name=coordinator.get_switch_info().name,
+                name=generate_entity_name(_FUNCTION_DISPLAYED_NAME_NETWORK_INFO, device_name) if device_name else None,
+                device_name=device_name,
                 function_uid=_FUNCTION_UID_NETWORK_INFO,
                 function_name=_FUNCTION_DISPLAYED_NAME_NETWORK_INFO,
             ),
@@ -89,7 +88,8 @@ async def async_setup_entry(
                     device_class=SensorDeviceClass.POWER,
                     native_unit_of_measurement=UnitOfPower.WATT,
                     state_class=SensorStateClass.MEASUREMENT,
-                    device_name=coordinator.get_switch_info().name,
+                    name=generate_entity_name(_FUNCTION_DISPLAYED_NAME_POE_INFO, device_name) if device_name else None,
+                    device_name=device_name,
                     function_uid=_FUNCTION_UID_POE_INFO,
                     function_name=_FUNCTION_DISPLAYED_NAME_POE_INFO,
                 ),
@@ -102,8 +102,8 @@ async def async_setup_entry(
 # ---------------------------
 #   TpLinkSensor
 # ---------------------------
-class TpLinkSensor(CoordinatorEntity[TpLinkDataUpdateCoordinator], SensorEntity):
-    entity_description: TpLinkSensorEntityDescription
+class TpLinkSensor(CoordinatorEntity[TpLinkDataUpdateCoordinator], SensorEntity):  # pyright: ignore[reportIncompatibleVariableOverride]
+    entity_description: TpLinkSensorEntityDescription  # pyright: ignore[reportIncompatibleVariableOverride]
 
     def __init__(
         self,
@@ -112,7 +112,7 @@ class TpLinkSensor(CoordinatorEntity[TpLinkDataUpdateCoordinator], SensorEntity)
     ) -> None:
         """Initialize."""
         super().__init__(coordinator)
-        self.entity_description = description
+        self.entity_description = description  # pyright: ignore[reportIncompatibleVariableOverride]
         self._attr_device_info = coordinator.get_device_info()
         self._attr_unique_id = generate_entity_unique_id(
             coordinator, description.function_uid
@@ -120,11 +120,6 @@ class TpLinkSensor(CoordinatorEntity[TpLinkDataUpdateCoordinator], SensorEntity)
         self.entity_id = generate_entity_id(
             coordinator, ENTITY_DOMAIN, description.function_name
         )
-
-    @property
-    def available(self) -> bool:
-        """Return if entity is available."""
-        return self._attr_available
 
     async def async_added_to_hass(self) -> None:
         """Run when entity about to be added to hass."""
@@ -137,8 +132,6 @@ class TpLinkSensor(CoordinatorEntity[TpLinkDataUpdateCoordinator], SensorEntity)
 #   TpLinkNetworkInfoSensor
 # ---------------------------
 class TpLinkNetworkInfoSensor(TpLinkSensor):
-    entity_description: TpLinkSensorEntityDescription
-    _attr_native_value: str | None = None
 
     def __init__(
         self,
@@ -168,8 +161,6 @@ class TpLinkNetworkInfoSensor(TpLinkSensor):
 #   TpLinkPoeInfoSensor
 # ---------------------------
 class TpLinkPoeInfoSensor(TpLinkSensor):
-    entity_description: TpLinkSensorEntityDescription
-    _attr_native_value: float | None = None
 
     def __init__(
         self,
