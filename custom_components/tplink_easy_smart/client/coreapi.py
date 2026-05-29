@@ -246,7 +246,8 @@ class TpLinkWebApi:
     async def _get_raw(self, path: str) -> ClientResponse:
         """Perform GET request to the specified relative URL and return raw ClientResponse."""
         session = self._session
-        assert session is not None
+        if session is None:
+            raise RuntimeError("Session not initialized — call authenticate() first")
         try:
             _LOGGER.debug("Performing GET to %s", path)
             response = await session.get(
@@ -274,7 +275,8 @@ class TpLinkWebApi:
     async def _post_raw(self, path: str, data: Dict | None) -> ClientResponse:
         """Perform POST request to the specified relative URL with specified body and return raw ClientResponse."""
         session = self._session
-        assert session is not None
+        if session is None:
+            raise RuntimeError("Session not initialized — call authenticate() first")
         try:
             _LOGGER.debug("Performing POST to %s", path)
             response = await session.post(

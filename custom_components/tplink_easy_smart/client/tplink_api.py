@@ -172,6 +172,8 @@ class TpLinkApi:
             return result
 
         for number in range(1, max_port_num + 1):
+            if number - 1 >= len(speeds_config):
+                break
             state = PortState(
                 number=number,
                 speed_config=PortSpeed(speeds_config[number - 1]),

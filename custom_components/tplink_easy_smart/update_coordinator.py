@@ -199,7 +199,7 @@ class TpLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
         result = DeviceInfo(
             configuration_url=self._api.device_url,
-            identifiers={(DOMAIN, switch_info.mac or "")},
+            identifiers={(DOMAIN, switch_info.mac or self.unique_id)},
             manufacturer=ATTR_MANUFACTURER,
             name=switch_info.name,
             hw_version=switch_info.hardware,
