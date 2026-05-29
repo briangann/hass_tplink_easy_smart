@@ -5,6 +5,9 @@ on:
   push:
     branches: [master]
 
+permissions:
+  contents: read
+
 jobs:
   pyright:
     runs-on: "ubuntu-latest"
@@ -18,7 +21,7 @@ jobs:
           python-version: "3.12"
 
       - name: "Install dependencies"
-        run: pip install homeassistant json5 pyright
+        run: pip install homeassistant==2025.1.4 json5==0.14.0 pyright==1.1.409
 
       - name: "Run pyright"
         run: pyright custom_components/tplink_easy_smart/
