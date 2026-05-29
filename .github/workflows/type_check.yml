@@ -18,10 +18,13 @@ jobs:
       - name: "Set up Python"
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
-          python-version: "3.12"
+          python-version: "3.14"
+
+      - name: "Shallow clone Home Assistant core"
+        run: git clone --depth 1 --branch 2026.5.4 https://github.com/home-assistant/core.git /tmp/ha-core
 
       - name: "Install dependencies"
-        run: pip install homeassistant==2025.1.4 json5==0.14.0 pyright==1.1.409
+        run: pip install --no-deps /tmp/ha-core && pip install json5==0.14.0 pyright==1.1.409
 
       - name: "Run pyright"
         run: pyright custom_components/tplink_easy_smart/

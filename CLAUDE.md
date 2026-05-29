@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 There is no test suite. The primary correctness tool is pyright. Run it against the whole integration:
 
 ```bash
-pyright --pythonpath /Users/bgann/venv/bin/python3 custom_components/tplink_easy_smart/
+pyright --pythonpath /Users/bgann/venv314/bin/python3 custom_components/tplink_easy_smart/
 ```
 
 `pyrightconfig.json` is gitignored (machine-specific). Create one at the repo root pointing to a venv that has `homeassistant` and `json5` installed:
@@ -16,11 +16,16 @@ pyright --pythonpath /Users/bgann/venv/bin/python3 custom_components/tplink_easy
 {
   "venvPath": "/path/to/parent",
   "venv": "venv-name",
-  "pythonVersion": "3.12"
+  "pythonVersion": "3.14"
 }
 ```
 
-The venv needs both packages: `pip install homeassistant json5`.
+The venv needs Python 3.14 and HA core installed without its deps (HA 2026.x requires 3.14+). Shallow clone HA core then install:
+
+```bash
+git clone --depth 1 --branch 2026.5.4 https://github.com/home-assistant/core.git /tmp/ha-core
+pip install --no-deps /tmp/ha-core json5
+```
 
 ## Architecture
 
