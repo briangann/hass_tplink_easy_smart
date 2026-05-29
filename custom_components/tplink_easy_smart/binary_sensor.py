@@ -187,26 +187,25 @@ class TpLinkPortStateBinarySensor(TpLinkBinarySensor):
                 port_info.enabled and port_info.speed_actual != PortSpeed.LINK_DOWN
             )
 
-            self._attr_extra_state_attributes["number"] = port_info.number
-            self._attr_extra_state_attributes["enabled"] = 'Enabled' if port_info.enabled else 'Disabled'
-            self._attr_extra_state_attributes["flow_control_config"] = 'On' if port_info.flow_control_config else 'Off'
-            self._attr_extra_state_attributes["flow_control_actual"] = 'On' if port_info.flow_control_actual else 'Off'
-            self._attr_extra_state_attributes["speed"] = DISPLAYED_PORT_SPEED.get(
-                port_info.speed_actual
-            )
-            self._attr_extra_state_attributes[
-                "speed_config"
-            ] = DISPLAYED_PORT_SPEED.get(port_info.speed_config)
-
             port_statistics = self.coordinator.get_port_statistics(self._port_number)
-            if port_statistics:
-                self._attr_extra_state_attributes["tx_good_packets"] = port_statistics.tx_good_pkts
-                self._attr_extra_state_attributes["rx_good_packets"] = port_statistics.rx_good_pkts
-                self._attr_extra_state_attributes["tx_bad_packets"] = port_statistics.tx_bad_pkts
-                self._attr_extra_state_attributes["rx_bad_packets"] = port_statistics.rx_bad_pkts
-            else:
-                for key in ("tx_good_packets", "rx_good_packets", "tx_bad_packets", "rx_bad_packets"):
-                    self._attr_extra_state_attributes.pop(key, None)
+            self._attr_extra_state_attributes = {
+                "number": port_info.number,
+                "enabled": 'Enabled' if port_info.enabled else 'Disabled',
+                "flow_control_config": 'On' if port_info.flow_control_config else 'Off',
+                "flow_control_actual": 'On' if port_info.flow_control_actual else 'Off',
+                "speed": DISPLAYED_PORT_SPEED.get(port_info.speed_actual),
+                "speed_config": DISPLAYED_PORT_SPEED.get(port_info.speed_config),
+                **(
+                    {
+                        "tx_good_packets": port_statistics.tx_good_pkts,
+                        "rx_good_packets": port_statistics.rx_good_pkts,
+                        "tx_bad_packets": port_statistics.tx_bad_pkts,
+                        "rx_bad_packets": port_statistics.rx_bad_pkts,
+                    }
+                    if port_statistics
+                    else {}
+                ),
+            }
         else:
             self._attr_available = False
             self._attr_is_on = None
