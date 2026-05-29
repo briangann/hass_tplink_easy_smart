@@ -2,9 +2,9 @@
 
 from abc import ABC, abstractmethod
 import asyncio
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import logging
-from typing import Final
+from typing import Any, Final
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.config_entries import ConfigEntry
@@ -42,23 +42,19 @@ ENTITY_DOMAIN: Final = "switch"
 # ---------------------------
 #   TpLinkSwitchEntityDescription
 # ---------------------------
-@dataclass
+@dataclass(frozen=True)
 class TpLinkSwitchEntityDescription(SwitchEntityDescription):
     """A class that describes switch."""
 
     function_name: str | None = None
     function_uid: str | None = None
     device_name: str | None = None
-    name: str | None = field(init=False)
-
-    def __post_init__(self):
-        self.name = generate_entity_name(self.function_name, self.device_name)
 
 
 # ---------------------------
 #   TpLinkPortSwitchEntityDescription
 # ---------------------------
-@dataclass
+@dataclass(frozen=True)
 class TpLinkPortSwitchEntityDescription(TpLinkSwitchEntityDescription):
     """A class that describes port switch."""
 
@@ -75,25 +71,25 @@ async def async_setup_entry(
 ) -> None:
     """Set up sensors for TP-Link component."""
     coordinator: TpLinkDataUpdateCoordinator = get_coordinator(hass, config_entry)
+    switch_info = coordinator.get_switch_info()
+    device_name = switch_info.name if switch_info else None
 
     sensors = []
 
     if config_entry.options.get(OPT_PORT_STATE_SWITCHES, DEFAULT_PORT_STATE_SWITCHES):
         for port_number in range(1, coordinator.ports_count + 1):
+            function_name = _FUNCTION_DISPLAYED_NAME_PORT_STATE_FORMAT.format(port_number)
             sensors.append(
                 TpLinkPortStateSwitch(
                     coordinator,
                     TpLinkPortSwitchEntityDescription(
                         key=f"port_{port_number}_enabled",
                         icon="mdi:ethernet",
+                        name=generate_entity_name(function_name, device_name) if device_name else None,
                         port_number=port_number,
-                        device_name=coordinator.get_switch_info().name,
-                        function_uid=_FUNCTION_UID_PORT_STATE_FORMAT.format(
-                            port_number
-                        ),
-                        function_name=_FUNCTION_DISPLAYED_NAME_PORT_STATE_FORMAT.format(
-                            port_number
-                        ),
+                        device_name=device_name,
+                        function_uid=_FUNCTION_UID_PORT_STATE_FORMAT.format(port_number),
+                        function_name=function_name,
                     ),
                 )
             )
@@ -102,20 +98,18 @@ async def async_setup_entry(
         OPT_POE_STATE_SWITCHES, DEFAULT_POE_STATE_SWITCHES
     ) and await coordinator.is_feature_available(FEATURE_POE):
         for port_number in range(1, coordinator.ports_poe_count + 1):
+            function_name = _FUNCTION_DISPLAYED_NAME_PORT_POE_STATE_FORMAT.format(port_number)
             sensors.append(
                 TpLinkPortPoeStateSwitch(
                     coordinator,
                     TpLinkPortSwitchEntityDescription(
                         key=f"port_{port_number}_poe_enabled",
                         icon="mdi:lightning-bolt-outline",
+                        name=generate_entity_name(function_name, device_name) if device_name else None,
                         port_number=port_number,
-                        device_name=coordinator.get_switch_info().name,
-                        function_uid=_FUNCTION_UID_PORT_POE_STATE_FORMAT.format(
-                            port_number
-                        ),
-                        function_name=_FUNCTION_DISPLAYED_NAME_PORT_POE_STATE_FORMAT.format(
-                            port_number
-                        ),
+                        device_name=device_name,
+                        function_uid=_FUNCTION_UID_PORT_POE_STATE_FORMAT.format(port_number),
+                        function_name=function_name,
                     ),
                 )
             )
@@ -126,8 +120,10 @@ async def async_setup_entry(
 # ---------------------------
 #   TpLinkSwitch
 # ---------------------------
-class TpLinkSwitch(CoordinatorEntity[TpLinkDataUpdateCoordinator], SwitchEntity, ABC):
-    entity_description: TpLinkSwitchEntityDescription
+class TpLinkSwitch(  # pyright: ignore[reportIncompatibleVariableOverride]
+    CoordinatorEntity[TpLinkDataUpdateCoordinator], SwitchEntity, ABC
+):
+    entity_description: TpLinkSwitchEntityDescription  # pyright: ignore[reportIncompatibleVariableOverride]
 
     def __init__(
         self,
@@ -137,7 +133,7 @@ class TpLinkSwitch(CoordinatorEntity[TpLinkDataUpdateCoordinator], SwitchEntity,
         """Initialize."""
         super().__init__(coordinator)
 
-        self.entity_description = description
+        self.entity_description = description  # pyright: ignore[reportIncompatibleVariableOverride]
         self._attr_device_info = coordinator.get_device_info()
         self._attr_unique_id = generate_entity_unique_id(
             coordinator, description.function_uid
@@ -154,7 +150,7 @@ class TpLinkSwitch(CoordinatorEntity[TpLinkDataUpdateCoordinator], SwitchEntity,
         _LOGGER.debug("Switch %s added to hass", self.entity_description.name)
 
     @property
-    def available(self) -> bool:
+    def available(self) -> bool:  # pyright: ignore[reportIncompatibleVariableOverride]
         """Return if entity is available."""
         return self.is_on is not None
 
@@ -172,21 +168,21 @@ class TpLinkSwitch(CoordinatorEntity[TpLinkDataUpdateCoordinator], SwitchEntity,
         await self._go_to_state(state)
         self.async_write_ha_state()
 
-    async def async_turn_off(self, **kwargs: any) -> None:
+    async def async_turn_off(self, **kwargs: Any) -> None:
         """async_turn_off."""
         await self.__go_to_state(False)
 
-    async def async_turn_on(self, **kwargs: any) -> None:
+    async def async_turn_on(self, **kwargs: Any) -> None:
         """async_turn_on."""
         await self.__go_to_state(True)
 
-    def turn_on(self, **kwargs: any) -> None:
+    def turn_on(self, **kwargs: Any) -> None:
         """turn_on."""
         return asyncio.run_coroutine_threadsafe(
             self.async_turn_on(**kwargs), self.hass.loop
         ).result()
 
-    def turn_off(self, **kwargs: any) -> None:
+    def turn_off(self, **kwargs: Any) -> None:
         """turn_off."""
         return asyncio.run_coroutine_threadsafe(
             self.async_turn_off(**kwargs), self.hass.loop
@@ -197,8 +193,6 @@ class TpLinkSwitch(CoordinatorEntity[TpLinkDataUpdateCoordinator], SwitchEntity,
 #   TpLinkPortStateSwitch
 # ---------------------------
 class TpLinkPortStateSwitch(TpLinkSwitch):
-    entity_description: TpLinkPortSwitchEntityDescription
-
     def __init__(
         self,
         coordinator: TpLinkDataUpdateCoordinator,
@@ -223,6 +217,8 @@ class TpLinkPortStateSwitch(TpLinkSwitch):
 
     @callback
     def _handle_coordinator_update(self) -> None:
+        if self._port_number is None:
+            return
         self._port_info = self.coordinator.get_port_state(self._port_number)
         self._attr_is_on = self._port_info.enabled if self._port_info else None
         super()._handle_coordinator_update()
@@ -232,8 +228,6 @@ class TpLinkPortStateSwitch(TpLinkSwitch):
 #   TpLinkPortPoeStateSwitch
 # ---------------------------
 class TpLinkPortPoeStateSwitch(TpLinkSwitch):
-    entity_description: TpLinkPortSwitchEntityDescription
-
     def __init__(
         self,
         coordinator: TpLinkDataUpdateCoordinator,
@@ -258,6 +252,8 @@ class TpLinkPortPoeStateSwitch(TpLinkSwitch):
 
     @callback
     def _handle_coordinator_update(self) -> None:
+        if self._port_number is None:
+            return
         self._port_poe_info = self.coordinator.get_port_poe_state(self._port_number)
         self._attr_is_on = self._port_poe_info.enabled if self._port_poe_info else None
         super()._handle_coordinator_update()

@@ -106,7 +106,8 @@ def _find_coordinator(
         coordinator = item.get(DATA_KEY_COORDINATOR)
         if not coordinator or not isinstance(coordinator, TpLinkDataUpdateCoordinator):
             continue
-        if coordinator.get_switch_info().mac == device_mac:
+        switch_info = coordinator.get_switch_info()
+        if switch_info and switch_info.mac == device_mac:
             return coordinator
     return None
 
@@ -197,7 +198,7 @@ async def async_setup_services(hass: HomeAssistant, config_entry: ConfigEntry) -
         if service_name == ServiceNames.SET_GENERAL_POE_LIMIT:
             await _async_set_general_poe_limit(hass, service)
 
-        if service_name == ServiceNames.SET_PORT_POE_SETTINGS:
+        elif service_name == ServiceNames.SET_PORT_POE_SETTINGS:
             await _async_set_port_poe_settings(hass, service)
 
         else:

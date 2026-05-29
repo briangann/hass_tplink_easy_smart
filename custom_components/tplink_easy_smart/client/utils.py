@@ -1,7 +1,7 @@
 import logging
 from functools import wraps
 
-from .const import FEATURE_POE, URL_POE_SETTINGS_GET
+from .const import FEATURE_POE, FEATURE_STATS, URL_POE_SETTINGS_GET, URL_PORT_STATISTICS_GET
 from .coreapi import (
     ApiCallError,
     TpLinkWebApi,
@@ -68,12 +68,32 @@ class TpLinkFeaturesDetector:
                 ("poe_port_num", VariableType.Int),
             ],
         )
-        return data.get("portConfig") is not None and data.get("poe_port_num") > 0
+        if data is None:
+            return False
+        poe_port_num = data.get("poe_port_num")
+        return data.get("portConfig") is not None and isinstance(poe_port_num, int) and poe_port_num > 0
+
+    @log_feature(FEATURE_STATS)
+    @disconnected_as_false
+    async def _is_stats_available(self) -> bool:
+        data = await self._core_api.get_variables(
+            URL_PORT_STATISTICS_GET,
+            [
+                ("all_info", VariableType.Dict),
+                ("max_port_num", VariableType.Int),
+            ],
+        )
+        if data is None:
+            return False
+        max_port_num = data.get("max_port_num")
+        return data.get("all_info") is not None and isinstance(max_port_num, int) and max_port_num > 0
 
     async def update(self) -> None:
         """Update the available features list."""
         if await self._is_poe_available():
             self._available_features.add(FEATURE_POE)
+        if await self._is_stats_available():
+            self._available_features.add(FEATURE_STATS)
 
     def is_available(self, feature: str) -> bool:
         """Return true if feature is available."""

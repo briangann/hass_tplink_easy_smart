@@ -32,9 +32,9 @@ def generate_entity_name(function_displayed_name: str, device_name: str) -> str:
 def generate_entity_id(
     coordinator: TpLinkDataUpdateCoordinator,
     entity_domain: str,
-    function_displayed_name: str,
+    function_displayed_name: str | None,
 ) -> str:
-    preferred_id = f"{coordinator.name} {function_displayed_name}"
+    preferred_id = f"{coordinator.name} {function_displayed_name or ''}"
     return hass_generate_id(entity_domain + ".{}", preferred_id, hass=coordinator.hass)
 
 
@@ -42,11 +42,12 @@ def generate_entity_id(
 #   generate_entity_unique_id
 # ---------------------------
 def generate_entity_unique_id(
-    coordinator: TpLinkDataUpdateCoordinator, function_uid: str
+    coordinator: TpLinkDataUpdateCoordinator, function_uid: str | None
 ) -> str:
     prefix = coordinator.unique_id
-    suffix = coordinator.get_switch_info().mac
-    return f"{prefix}_{function_uid}_{suffix.lower()}"
+    switch_info = coordinator.get_switch_info()
+    suffix = (switch_info.mac or "") if switch_info else ""
+    return f"{prefix}_{function_uid or ''}_{suffix.lower()}"
 
 
 # ---------------------------

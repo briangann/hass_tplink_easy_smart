@@ -12,12 +12,12 @@ MAC_ADDR: TypeAlias = str
 # ---------------------------
 @dataclass()
 class TpLinkSystemInfo:
-    name: str | None = (None,)
-    mac: str | None = (None,)
-    ip: str | None = (None,)
-    netmask: str | None = (None,)
-    gateway: str | None = (None,)
-    firmware: str | None = (None,)
+    name: str | None = None
+    mac: str | None = None
+    ip: str | None = None
+    netmask: str | None = None
+    gateway: str | None = None
+    firmware: str | None = None
     hardware: str | None = None
 
 
@@ -118,6 +118,18 @@ class PortState:
     speed_config: PortSpeed
     speed_actual: PortSpeed
 
+
+# ---------------------------
+#   PortStatistics
+# ---------------------------
+@dataclass
+class PortStatistics:
+    number: int
+    enabled: bool
+    tx_good_pkts: int
+    tx_bad_pkts: int
+    rx_good_pkts: int
+    rx_bad_pkts: int
 
 # ---------------------------
 #   PortPoeState
