@@ -7,25 +7,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 There is no test suite. The primary correctness tool is pyright. Run it against the whole integration:
 
 ```bash
-pyright --pythonpath /Users/bgann/venv314/bin/python3 custom_components/tplink_easy_smart/
+pyright custom_components/tplink_easy_smart/
 ```
 
-`pyrightconfig.json` is gitignored (machine-specific). Create one at the repo root pointing to a venv that has `homeassistant` and `json5` installed:
-
-```json
-{
-  "venvPath": "/path/to/parent",
-  "venv": "venv-name",
-  "pythonVersion": "3.14"
-}
-```
-
-The venv needs Python 3.14 and HA core installed without its deps (HA 2026.x requires 3.14+). Shallow clone HA core then install:
+`pyrightconfig.json` is gitignored (machine-specific). The repo ships a template pointing to `.venv` in the project root — just create the venv:
 
 ```bash
+uv venv --python 3.14
 git clone --depth 1 --branch 2026.5.4 https://github.com/home-assistant/core.git /tmp/ha-core
-pip install --no-deps /tmp/ha-core json5
+uv pip install --no-deps /tmp/ha-core
+uv pip install aiohttp voluptuous json5 pyright
 ```
+
+HA 2026.x requires Python 3.14+. `--no-deps` skips HA's large runtime dependency tree — only the HA source is needed for type checking.
 
 ## Architecture
 
