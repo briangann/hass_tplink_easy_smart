@@ -1,5 +1,5 @@
 {
-  "venvPath": "/Users/bgann",
-  "venv": "venv",
-  "pythonVersion": "3.12"
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.14"
 }
