@@ -18,7 +18,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .client.classes import PoePowerLimit, PoePriority, TpLinkSystemInfo
-from .client.const import FEATURE_POE
+from .client.const import FEATURE_POE, FEATURE_STATS
 from .client.tplink_api import (
     PoeState,
     PortPoeState,
@@ -53,6 +53,9 @@ class TpLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
         self._port_poe_states: list[PortPoeState] = []
         self._poe_state: PoeState | None = None
         self._port_statistics: list[PortStatistics] = []
+        self._feature_poe: bool = False
+        self._feature_stats: bool = False
+        self._features_detected: bool = False
 
         update_interval = config_entry.options.get(
             CONF_SCAN_INTERVAL,
@@ -136,6 +139,10 @@ class TpLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
     async def async_update(self) -> None:
         """Asynchronous update of all data."""
         _LOGGER.debug("Update started")
+        if not self._features_detected:
+            self._feature_poe = await self._api.is_feature_available(FEATURE_POE)
+            self._feature_stats = await self._api.is_feature_available(FEATURE_STATS)
+            self._features_detected = True
         await self._update_switch_info()
         await self._update_port_states()
         await self._update_poe_state()
@@ -161,6 +168,8 @@ class TpLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     async def _update_port_statistics(self):
         """Update port statistics."""
+        if not self._feature_stats:
+            return
         try:
             self._port_statistics = await self._api.get_port_statistics()
         except Exception as ex:
@@ -169,8 +178,7 @@ class TpLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     async def _update_poe_state(self):
         """Update the switch PoE state."""
-
-        if not await self.is_feature_available(FEATURE_POE):
+        if not self._feature_poe:
             return
 
         try:
@@ -180,8 +188,7 @@ class TpLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
 
     async def _update_port_poe_states(self):
         """Update port PoE states."""
-
-        if not await self.is_feature_available(FEATURE_POE):
+        if not self._feature_poe:
             return
 
         try:
