@@ -12,15 +12,18 @@ from .classes import (
     PortPoeState,
     PortSpeed,
     PortState,
+    PortStatistics,
     TpLinkSystemInfo,
 )
 from .const import (
     FEATURE_POE,
+    FEATURE_STATS,
     URL_DEVICE_INFO,
     URL_POE_PORT_SETTINGS_SET,
     URL_POE_SETTINGS_GET,
     URL_POE_SETTINGS_SET,
     URL_PORT_SETTINGS_SET,
+    URL_PORT_STATISTICS_GET,
     URL_PORTS_SETTINGS_GET,
 )
 from .coreapi import TpLinkWebApi, VariableType
@@ -167,6 +170,47 @@ class TpLinkApi:
             result.append(state)
 
         return result
+    async def get_port_statistics(self) -> list[PortStatistics]:
+        """Return the port statistics."""
+        if not await self.is_feature_available(FEATURE_STATS):
+            return []
+        data = await self._core_api.get_variables(
+            URL_PORT_STATISTICS_GET,
+            [
+                ("all_info", VariableType.Dict),
+                ("max_port_num", VariableType.Int),
+            ],
+        )
+
+        result: list[PortStatistics] = []
+
+        all_info = data.get("all_info")
+        if not all_info:
+            return result
+
+        max_port_num = data.get("max_port_num")
+        if not max_port_num:
+            return result
+
+        pkts = all_info.get("pkts")
+        enabled_flags = all_info.get("state")
+        k = 0
+        for number in range(1, max_port_num + 1):
+            if k + 4 > len(pkts):
+                break
+            state = PortStatistics(
+                number=number,
+                enabled=enabled_flags[number - 1] == 1,
+                tx_good_pkts=pkts[k + 0],
+                tx_bad_pkts=pkts[k + 1],
+                rx_good_pkts=pkts[k + 2],
+                rx_bad_pkts=pkts[k + 3],
+            )
+            k += 4
+            result.append(state)
+
+        return result
+
 
     async def get_port_poe_states(self) -> list[PortPoeState]:
         """Return the port states."""
