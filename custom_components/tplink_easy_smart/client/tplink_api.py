@@ -207,7 +207,7 @@ class TpLinkApi:
             return result
         k = 0
         for number in range(1, max_port_num + 1):
-            if k + 4 > len(pkts):
+            if k + 4 > len(pkts) or number - 1 >= len(enabled_flags):
                 break
             state = PortStatistics(
                 number=number,

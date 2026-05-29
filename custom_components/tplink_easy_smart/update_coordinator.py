@@ -18,7 +18,7 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .client.classes import PoePowerLimit, PoePriority, TpLinkSystemInfo
-from .client.const import FEATURE_POE, FEATURE_STATS
+from .client.const import FEATURE_POE
 from .client.tplink_api import (
     PoeState,
     PortPoeState,
@@ -161,9 +161,6 @@ class TpLinkDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _update_port_statistics(self):
         """Update port statistics."""
-        if not await self.is_feature_available(FEATURE_STATS):
-            return
-
         try:
             self._port_statistics = await self._api.get_port_statistics()
         except Exception as ex:
