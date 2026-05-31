@@ -151,6 +151,8 @@ class TpLinkNetworkInfoSensor(TpLinkSensor):
             self._attr_extra_state_attributes["mac"] = system_info.mac
             self._attr_extra_state_attributes["gateway"] = system_info.gateway
             self._attr_extra_state_attributes["netmask"] = system_info.netmask
+            self._attr_extra_state_attributes["firmware"] = system_info.firmware
+            self._attr_extra_state_attributes["hardware"] = system_info.hardware
             self._attr_available = True
         else:
             self._attr_available = False
