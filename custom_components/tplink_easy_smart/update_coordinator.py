@@ -1,5 +1,5 @@
 """Update coordinator for TP-Link."""
-from datetime import timedelta
+from datetime import datetime, timedelta
 import logging
 
 from homeassistant.config_entries import ConfigEntry
@@ -19,6 +19,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .client.classes import PoePowerLimit, PoePriority, TpLinkSystemInfo
 from .client.const import FEATURE_POE, FEATURE_STATS
+from .client.coreapi import SessionBusyError
 from .client.tplink_api import (
     PoeState,
     PortPoeState,
@@ -30,6 +31,8 @@ from .client.tplink_api import (
 from .const import ATTR_MANUFACTURER, DEFAULT_SCAN_INTERVAL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+_SESSION_BUSY_BACKOFF_SECONDS = 300
 
 
 # ---------------------------
@@ -56,6 +59,7 @@ class TpLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
         self._feature_poe: bool = False
         self._feature_stats: bool = False
         self._features_detected: bool = False
+        self._session_busy_until: datetime | None = None
 
         update_interval = config_entry.options.get(
             CONF_SCAN_INTERVAL,
@@ -139,15 +143,38 @@ class TpLinkDataUpdateCoordinator(DataUpdateCoordinator[None]):
     async def async_update(self) -> None:
         """Asynchronous update of all data."""
         _LOGGER.debug("Update started")
-        if not self._features_detected:
-            self._feature_poe = await self._api.is_feature_available(FEATURE_POE)
-            self._feature_stats = await self._api.is_feature_available(FEATURE_STATS)
-            self._features_detected = True
-        await self._update_switch_info()
-        await self._update_port_states()
-        await self._update_poe_state()
-        await self._update_port_poe_states()
-        await self._update_port_statistics()
+
+        if self._session_busy_until is not None:
+            if datetime.now() < self._session_busy_until:
+                _LOGGER.debug(
+                    "Skipping update: switch web session busy until %s",
+                    self._session_busy_until,
+                )
+                return
+            self._session_busy_until = None
+
+        try:
+            if not self._features_detected:
+                self._feature_poe = await self._api.is_feature_available(FEATURE_POE)
+                self._feature_stats = await self._api.is_feature_available(FEATURE_STATS)
+                self._features_detected = True
+            await self._update_switch_info()
+            await self._update_port_states()
+            await self._update_poe_state()
+            await self._update_port_poe_states()
+            await self._update_port_statistics()
+        except SessionBusyError:
+            self._session_busy_until = datetime.now() + timedelta(
+                seconds=_SESSION_BUSY_BACKOFF_SECONDS
+            )
+            _LOGGER.warning(
+                "Switch web session is busy (another user is logged in). "
+                "Polling paused for %d seconds until %s.",
+                _SESSION_BUSY_BACKOFF_SECONDS,
+                self._session_busy_until,
+            )
+            return
+
         _LOGGER.debug("Update completed")
 
     async def async_unload(self) -> None:

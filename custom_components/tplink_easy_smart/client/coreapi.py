@@ -26,6 +26,7 @@ AUTH_FAILURE_CREDENTIALS: Final = "auth_invalid_credentials"
 AUTH_USER_BLOCKED: Final = "auth_user_blocked"
 AUTH_TOO_MANY_USERS: Final = "auth_too_many_users"
 AUTH_SESSION_TIMEOUT: Final = "auth_session_timeout"
+AUTH_SESSION_BUSY: Final = "auth_session_busy"
 
 _SCRIPT_REGEX = r".*<script>(.*)<\/script>"
 _VARIABLES_REGEX = r".*var\s+(?P<variable>[a-zA-Z0-9_]+)\s*=\s*(?P<value>[^;]+);\s*"
@@ -70,6 +71,17 @@ class AuthenticationError(Exception):
     def __repr__(self) -> str:
         """Return repr(self)."""
         return self.__str__()
+
+
+# ---------------------------
+#   SessionBusyError
+# ---------------------------
+class SessionBusyError(AuthenticationError):
+    """Raised when the switch refuses login because another session is active."""
+
+    def __init__(self, message: str) -> None:
+        """Initialize."""
+        super().__init__(message, AUTH_SESSION_BUSY)
 
 
 # ---------------------------
@@ -355,14 +367,12 @@ class TpLinkWebApi:
                     "The user is not allowed to login", AUTH_USER_BLOCKED
                 )
             elif array_items[0] == "3":
-                raise AuthenticationError(
-                    "The number of the user that allowed to login has been full",
-                    AUTH_TOO_MANY_USERS,
+                raise SessionBusyError(
+                    "The switch refused login: another session is already active"
                 )
             elif array_items[0] == "4":
-                raise AuthenticationError(
-                    "The number of the login user has been full, it is allowed 16 people to login at the same time",
-                    AUTH_TOO_MANY_USERS,
+                raise SessionBusyError(
+                    "The switch refused login: maximum concurrent sessions reached"
                 )
             elif array_items[0] == "5":
                 raise AuthenticationError(
