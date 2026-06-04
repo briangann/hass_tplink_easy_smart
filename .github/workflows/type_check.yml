@@ -19,12 +19,13 @@ jobs:
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.14"
+          allow-prereleases: true
 
       - name: "Shallow clone Home Assistant core"
         run: git clone --depth 1 --branch 2026.5.4 https://github.com/home-assistant/core.git /tmp/ha-core
 
       - name: "Install dependencies"
-        run: pip install --no-deps /tmp/ha-core && pip install aiohttp voluptuous json5==0.14.0 pyright==1.1.409 pytest pytest-asyncio
+        run: pip install --no-deps /tmp/ha-core && pip install aiohttp voluptuous json5==0.14.0 pyright==1.1.410 pytest pytest-asyncio
 
       - name: "Run pyright"
         run: pyright custom_components/tplink_easy_smart/
